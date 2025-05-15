@@ -18,7 +18,7 @@ namespace MLOOP_L9
 
         public static void Start()
         {
-            SongManager manager = new SongManager();
+            SongManager manager = new SongManager("songs.json");
 
             bool exit = false;
             while (!exit)
@@ -34,7 +34,7 @@ namespace MLOOP_L9
                 Console.WriteLine(" 2. Видалити пісню");
                 Console.WriteLine(" 3. Редагувати пісню");
                 Console.WriteLine(" 4. Пошук пісні");
-                Console.WriteLine(" 5. Зберегти колекцію у файл");
+                Console.WriteLine(" 5. Зберегти колекцію вручну");
                 Console.WriteLine(" 6. Завантажити колекцію з файлу");
                 Console.WriteLine(" 7. Показати пісні конкретного виконавця");
                 Console.WriteLine(" 8. Показати всі пісні");
@@ -57,10 +57,10 @@ namespace MLOOP_L9
                         manager.SearchSong();
                         break;
                     case 5:
-                        manager.SaveToFile();
+                        manager.SaveToFileUI();
                         break;
                     case 6:
-                        manager.LoadFromFile();
+                        manager.LoadFromFileUI();
                         break;
                     case 7:
                         manager.ShowSongsByPerformer();
@@ -70,6 +70,7 @@ namespace MLOOP_L9
                         break;
                     case 0:
                         exit = true;
+                        manager.CheckIsSaved();
                         break;
                     default:
                         break;

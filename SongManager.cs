@@ -5,9 +5,45 @@ namespace MLOOP_L9
 {
     public class SongManager
     {
-        private List<Song> songs = new List<Song>();
-        private string defaultFileName = "songs.json";
+        private Song[] songs = new Song[capacity];
+        private int count;
+        private const int capacity = 1024;
+        private const string defaultFileName = "songs.json";
         public const string lineText = "~~~~~";
+        private bool isSaved; // Прапор, який показує, чи зберегли ми зміни
+
+        public SongManager()
+        {
+            songs = new Song[capacity];
+            count = 0;
+        }
+
+        public SongManager(Song[] songs)
+        {
+            if (songs != null)
+            {
+                this.songs = new Song[capacity];
+                this.count = songs.Length;
+                Array.Copy(songs, this.songs, songs.Length);
+            }
+            else
+            {
+                this.songs = new Song[capacity];
+                count = 0;
+            }
+        }
+
+        public SongManager(string fileName)
+        {
+            songs = new Song[capacity];
+            count = 0;
+            LoadFromFile(fileName);
+        }
+
+        public void CheckIsSaved()
+        {
+            if (!isSaved) SaveToFile();
+        }
 
         public void AddSong()
         {
@@ -52,7 +88,10 @@ namespace MLOOP_L9
 
             Console.Write(" Посилання на пісню: \n > ");
             song.Link = Console.ReadLine() ?? string.Empty;
-            songs.Add(song);
+
+            songs[count] = song;
+            count++;
+            isSaved = false;
 
             Console.WriteLine("\n Пісню успішно додано! Натисніть будь-яку клавішу...");
             Console.ReadKey();
@@ -63,23 +102,30 @@ namespace MLOOP_L9
             Console.Clear();
             Console.WriteLine($"\n {lineText} ВИДАЛЕННЯ ПІСНІ {lineText} \n");
 
-            if (songs.Count == 0)
+            if (count == 0)
             {
                 Console.WriteLine(" Колекція пісень порожня. Натисніть будь-яку клавішу...");
                 Console.ReadKey();
                 return;
             }
 
-            for (int i = 0; i < songs.Count; i++)
+            for (int i = 0; i < count; i++)
             {
                 Console.WriteLine($" {i + 1}. {songs[i].Title} - {songs[i].Author}");
             }
 
             Console.Write("\n Введіть номер пісні для видалення: \n > ");
-            if (int.TryParse(Console.ReadLine(), out int index) && index > 0 && index <= songs.Count)
+            if (int.TryParse(Console.ReadLine(), out int index) && index > 0 && index <= count)
             {
                 string title = songs[index - 1].Title;
-                songs.RemoveAt(index - 1);
+
+                for (int i = index - 1; i < count - 1; i++)
+                {
+                    songs[i] = songs[i + 1];
+                }
+                count--;
+                isSaved = false;
+
                 Console.WriteLine($"\n Пісню '{title}' видалено. Натисніть будь-яку клавішу...");
             }
             else
@@ -95,20 +141,20 @@ namespace MLOOP_L9
             Console.Clear();
             Console.WriteLine($"\n {lineText} РЕДАГУВАННЯ ПІСНІ {lineText}\n");
 
-            if (songs.Count == 0)
+            if (count == 0)
             {
                 Console.WriteLine(" Колекція пісень порожня. Натисніть будь-яку клавішу...");
                 Console.ReadKey();
                 return;
             }
 
-            for (int i = 0; i < songs.Count; i++)
+            for (int i = 0; i < count; i++)
             {
                 Console.WriteLine($" {i + 1}. {songs[i].Title} - {songs[i].Author}");
             }
 
             Console.Write("\n Введіть номер пісні для редагування: ");
-            if (int.TryParse(Console.ReadLine(), out int index) && index > 0 && index <= songs.Count)
+            if (int.TryParse(Console.ReadLine(), out int index) && index > 0 && index <= count)
             {
                 Song song = songs[index - 1];
 
@@ -128,19 +174,23 @@ namespace MLOOP_L9
                         case 1:
                             Console.Write(" Нова назва: \n > ");
                             song.Title = Console.ReadLine() ?? song.Title;
+                            isSaved = false;
                             break;
                         case 2:
                             Console.Write(" Новий автор: \n > ");
                             song.Author = Console.ReadLine() ?? song.Author;
+                            isSaved = false;
                             break;
                         case 3:
                             Console.Write(" Новий композитор: \n > ");
                             song.Composer = Console.ReadLine() ?? song.Composer;
+                            isSaved = false;
                             break;
                         case 4:
                             Console.Write(" Новий рік: \n > ");
                             if (int.TryParse(Console.ReadLine(), out int newYear))
                                 song.Year = newYear;
+                            isSaved = false;
                             break;
                         case 5:
                             Console.WriteLine(" Новий текст пісні (введіть порожній рядок для завершення):\n > ");
@@ -151,6 +201,7 @@ namespace MLOOP_L9
                                 lyricsBuilder.AppendLine(line);
                             }
                             song.Lyrics = lyricsBuilder.ToString().Trim();
+                            isSaved = false;
                             break;
                         case 6:
                             Console.Write(" Кількість виконавців: \n > ");
@@ -163,6 +214,7 @@ namespace MLOOP_L9
                                     song.Performers[i] = Console.ReadLine() ?? string.Empty;
                                 }
                             }
+                            isSaved = false;
                             break;
                         default:
                             Console.WriteLine(" Неправильний вибір.");
@@ -189,7 +241,7 @@ namespace MLOOP_L9
             Console.Clear();
             Console.WriteLine($"\n {lineText} ПОШУК ПІСНІ {lineText}\n");
 
-            if (songs.Count == 0)
+            if (count == 0)
             {
                 Console.WriteLine(" Колекція пісень порожня. Натисніть будь-яку клавішу...");
                 Console.ReadKey();
@@ -206,7 +258,8 @@ namespace MLOOP_L9
 
             if (int.TryParse(Console.ReadLine(), out int choice))
             {
-                List<Song> results = new List<Song>();
+                Song[] results = new Song[count];
+                int resultCount = 0;
                 string searchTerm;
                 int searchYear;
 
@@ -215,27 +268,68 @@ namespace MLOOP_L9
                     case 1:
                         Console.Write(" Введіть назву для пошуку: \n > ");
                         searchTerm = Console.ReadLine() ?? string.Empty;
-                        results = songs.Where(s => s.Title.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
+                        for (int i = 0; i < count; i++)
+                        {
+                            if (songs[i].Title.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                            {
+                                results[resultCount++] = songs[i];
+                            }
+                        }
                         break;
                     case 2:
                         Console.Write(" Введіть автора для пошуку: \n > ");
                         searchTerm = Console.ReadLine() ?? string.Empty;
-                        results = songs.Where(s => s.Author.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
+                        for (int i = 0; i < count; i++)
+                        {
+                            if (songs[i].Author.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                            {
+                                results[resultCount++] = songs[i];
+                            }
+                        }
                         break;
                     case 3:
                         Console.Write(" Введіть композитора для пошуку: \n > ");
                         searchTerm = Console.ReadLine() ?? string.Empty;
-                        results = songs.Where(s => s.Composer.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
+                        for (int i = 0; i < count; i++)
+                        {
+                            if (songs[i].Composer.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                            {
+                                results[resultCount++] = songs[i];
+                            }
+                        }
                         break;
                     case 4:
                         Console.Write(" Введіть рік для пошуку: \n > ");
                         if (int.TryParse(Console.ReadLine(), out searchYear))
-                            results = songs.Where(s => s.Year == searchYear).ToList();
+                        {
+                            for (int i = 0; i < count; i++)
+                            {
+                                if (songs[i].Year == searchYear)
+                                {
+                                    results[resultCount++] = songs[i];
+                                }
+                            }
+                        }
                         break;
                     case 5:
                         Console.Write(" Введіть виконавця для пошуку: \n > ");
                         searchTerm = Console.ReadLine() ?? string.Empty;
-                        results = songs.Where(s => s.Performers.Any(p => p.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))).ToList();
+                        for (int i = 0; i < count; i++)
+                        {
+                            bool found = false;
+                            for (int j = 0; j < songs[i].Performers.Length; j++)
+                            {
+                                if (songs[i].Performers[j].Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            if (found)
+                            {
+                                results[resultCount++] = songs[i];
+                            }
+                        }
                         break;
                     default:
                         Console.WriteLine(" Неправильний вибір. Натисніть будь-яку клавішу...\n > ");
@@ -243,8 +337,8 @@ namespace MLOOP_L9
                         return;
                 }
 
-                Console.WriteLine($"\n Знайдено результатів: {results.Count}");
-                for (int i = 0; i < results.Count; i++)
+                Console.WriteLine($"\n Знайдено результатів: {resultCount}");
+                for (int i = 0; i < resultCount; i++)
                 {
                     Console.WriteLine($"\n --- Результат #{i + 1} ---");
                     Console.WriteLine(results[i].ToString());
@@ -259,16 +353,8 @@ namespace MLOOP_L9
             Console.ReadKey();
         }
 
-        public void SaveToFile()
+        private bool SaveToFile(string fileName = defaultFileName)
         {
-            Console.Clear();
-            Console.WriteLine($"\n {lineText} ЗБЕРЕЖЕННЯ КОЛЕКЦІЇ У ФАЙЛ {lineText}\n");
-
-            Console.Write($" Введіть ім'я файлу (за замовчуванням {defaultFileName}): \n > ");
-            string fileName = Console.ReadLine() ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(fileName))
-                fileName = defaultFileName;
-
             try
             {
                 JsonSerializerOptions options = new JsonSerializerOptions
@@ -277,20 +363,68 @@ namespace MLOOP_L9
                     Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
                 };
 
-                string jsonString = JsonSerializer.Serialize(songs, options);
-                File.WriteAllText(fileName, jsonString, Encoding.Unicode);
+                Song[] songsToSave = new Song[count];
+                Array.Copy(songs, songsToSave, count);
 
+                string jsonString = JsonSerializer.Serialize(songsToSave, options);
+                File.WriteAllText(fileName, jsonString, Encoding.Unicode);
+                isSaved = true;
+                return true;
+            }
+            catch 
+            { 
+                return false;
+            }
+        }
+
+        public void SaveToFileUI()
+        {
+            Console.Clear();
+            Console.WriteLine($"\n {lineText} ЗБЕРЕЖЕННЯ КОЛЕКЦІЇ У ФАЙЛ {lineText}\n");
+
+            Console.Write($" Введіть ім'я файлу (за замовчуванням {defaultFileName}): \n > ");
+            string fileName = Console.ReadLine() ?? defaultFileName;
+
+            if (SaveToFile(fileName))
+            {
                 Console.WriteLine($"\n Колекцію успішно збережено у файл '{fileName}'. Натисніть будь-яку клавішу...");
             }
-            catch (Exception ex)
+            else
             {
-                Console.WriteLine($"\n Помилка при збереженні файлу: {ex.Message}. Натисніть будь-яку клавішу...");
+                Console.WriteLine("\n Помилка при збереженні файлу! Натисніть будь-яку клавішу...");
             }
 
             Console.ReadKey();
         }
 
-        public void LoadFromFile()
+        private bool LoadFromFile(string fileName = defaultFileName)
+        {
+            try
+            {
+                string jsonString = File.ReadAllText(fileName, Encoding.Unicode);
+                Song[]? loadedSongs = JsonSerializer.Deserialize<Song[]>(jsonString);
+
+                if (loadedSongs != null)
+                {
+                    songs = new Song[capacity];
+                    count = loadedSongs.Length;
+                    Array.Copy(loadedSongs, songs, loadedSongs.Length);
+
+                    isSaved = true;
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public void LoadFromFileUI()
         {
             Console.Clear();
             Console.WriteLine($"\n {lineText} ЗАВАНТАЖЕННЯ КОЛЕКЦІЇ З ФАЙЛУ {lineText}\n");
@@ -307,30 +441,13 @@ namespace MLOOP_L9
                 return;
             }
 
-            if (!File.Exists(fileName))
+            if (LoadFromFile(fileName))
             {
-                Console.WriteLine($"\n Файл '{fileName}' не знайдено. Натисніть будь-яку клавішу...");
-                Console.ReadKey();
-                return;
+                Console.WriteLine($"\n Завантажено {count} пісень з файлу '{fileName}'. Натисніть будь-яку клавішу...");
             }
-
-            try
+            else
             {
-                string jsonString = File.ReadAllText(fileName, Encoding.Unicode);
-                List<Song>? loadedSongs = JsonSerializer.Deserialize<List<Song>>(jsonString);
-                if (loadedSongs != null)
-                {
-                    songs = loadedSongs;
-                    Console.WriteLine($"\n Завантажено {songs.Count} пісень з файлу '{fileName}'. Натисніть будь-яку клавішу...");
-                }
-                else
-                {
-                    Console.WriteLine("\n Помилка: Файл містить невірний формат даних. Натисніть будь-яку клавішу...");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"\n Помилка при завантаженні файлу: {ex.Message}. Натисніть будь-яку клавішу...");
+                Console.WriteLine("\n Помилка при завантаженні файлу! Натисніть будь-яку клавішу...");
             }
 
             Console.ReadKey();
@@ -341,7 +458,7 @@ namespace MLOOP_L9
             Console.Clear();
             Console.WriteLine($"\n {lineText} ПІСНІ ЗА ВИКОНАВЦЕМ {lineText}\n");
 
-            if (songs.Count == 0)
+            if (count == 0)
             {
                 Console.WriteLine(" Колекція пісень порожня. Натисніть будь-яку клавішу...");
                 Console.ReadKey();
@@ -351,13 +468,30 @@ namespace MLOOP_L9
             Console.Write(" Введіть ім'я виконавця: \n > ");
             string performer = Console.ReadLine() ?? string.Empty;
 
-            List<Song> performerSongs = songs
-                .Where(s => s.Performers.Any(p => p.Contains(performer, StringComparison.OrdinalIgnoreCase)))
-                .ToList();
+            Song[] performerSongs = new Song[count];
+            int resultCount = 0;
 
-            Console.WriteLine($"\n Знайдено пісень виконавця '{performer}': {performerSongs.Count}");
+            for (int i = 0; i < count; i++)
+            {
+                bool hasPerformer = false;
+                for (int j = 0; j < songs[i].Performers.Length; j++)
+                {
+                    if (songs[i].Performers[j].Contains(performer, StringComparison.OrdinalIgnoreCase))
+                    {
+                        hasPerformer = true;
+                        break;
+                    }
+                }
 
-            for (int i = 0; i < performerSongs.Count; i++)
+                if (hasPerformer)
+                {
+                    performerSongs[resultCount++] = songs[i];
+                }
+            }
+
+            Console.WriteLine($"\n Знайдено пісень виконавця '{performer}': {resultCount}");
+
+            for (int i = 0; i < resultCount; i++)
             {
                 Console.WriteLine($"\n --- Пісня #{i + 1} ---");
                 Console.WriteLine(performerSongs[i].ToString());
@@ -372,14 +506,14 @@ namespace MLOOP_L9
             Console.Clear();
             Console.WriteLine($"\n {lineText} УСІ ПІСНІ В КОЛЕКЦІЇ {lineText}\n");
 
-            if (songs.Count == 0)
+            if (count == 0)
             {
                 Console.WriteLine(" Колекція пісень порожня. Натисніть будь-яку клавішу...");
                 Console.ReadKey();
                 return;
             }
 
-            for (int i = 0; i < songs.Count; i++)
+            for (int i = 0; i < count; i++)
             {
                 Console.WriteLine($"\n --- Пісня #{i + 1} ---");
                 Console.WriteLine(songs[i].ToString());
